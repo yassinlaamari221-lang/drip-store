@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DRIP — Premium T-Shirts & Jeans</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ══════════════════════════════════════════
+   VARIABLES
+══════════════════════════════════════════ */
+:root{
+  --bg:#050508;
+  --surface:#0b0b10;
+  --card:#0f0f16;
+  --border:rgba(255,215,90,0.1);
+  --border-h:rgba(255,215,90,0.28);
+  --gold:#ffd75a;
+  --gold2:#ffe999;
+  --gold3:#c8920a;
+  --glow:rgba(255,215,90,0.22);
+  --dim:rgba(255,215,90,0.08);
+  --white:#f2ede4;
+  --muted:#65625a;
+  --light:#a09890;
+  --red:#e05555;
+  --green:#4ade80;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--white);
+  font-family:'Syne',sans-serif;
+  overflow-x:hidden;cursor:none;
+  -webkit-font-smoothing:antialiased;
+}
+button,a{cursor:none;font-family:'Syne',sans-serif}
+img{display:block}
+
+/* ══════════════════════════════════════════
+   GRAIN
+══════════════════════════════════════════ */
+body::after{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size:200px;
+}
+
+/* ══════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════ */
+#cur{
+  position:fixed;width:7px;height:7px;background:var(--gold);
+  border-radius:50%;pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);mix-blend-mode:difference;
+  transition:width .18s,height .18s;
+}
+#cur-r{
+  position:fixed;width:36px;height:36px;
+  border:1px solid rgba(255,215,90,.35);border-radius:50%;
+  pointer-events:none;z-index:9998;
+  transform:translate(-50%,-50%);
+  transition:width .22s,height .22s,border-color .22s;
+}
+.cur-big #cur{width:12px;height:12px}
+.cur-big #cur-r{width:54px;height:54px;border-color:rgba(255,215,90,.65)}
+
+/* ══════════════════════════════════════════
+   LOADER
+══════════════════════════════════════════ */
+#loader{
+  position:fixed;inset:0;background:var(--bg);z-index:7000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.5rem;
+  transition:opacity .9s ease,visibility .9s ease;
+}
+#loader.out{opacity:0;visibility:hidden}
+.l-logo{
+  font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;
+  letter-spacing:20px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:l-pulse 1.6s ease-in-out infinite;
+}
+@keyframes l-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+.l-track{width:180px;height:1px;background:var(--border);position:relative;overflow:hidden}
+.l-fill{
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  animation:l-sweep 1.6s ease forwards;
+}
+@keyframes l-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.l-label{font-size:.6rem;letter-spacing:6px;text-transform:uppercase;color:var(--muted)}
+
+/* ══════════════════════════════════════════
+   NAVBAR
+══════════════════════════════════════════ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;height:70px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 3.5rem;
+  background:rgba(5,5,8,.82);backdrop-filter:blur(28px);
+  border-bottom:1px solid var(--border);
+  transform:translateY(-110%);
+  transition:transform .7s cubic-bezier(.4,0,.2,1);
+}
+nav.show{transform:translateY(0)}
+.n-logo{
+  font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:300;
+  letter-spacing:8px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.n-links{display:flex;align-items:center;gap:3rem}
+.n-a{
+  font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);
+  position:relative;transition:color .25s;padding:.3rem 0;text-decoration:none;
+}
+.n-a::after{
+  content:'';position:absolute;bottom:0;left:0;width:0;height:1px;
+  background:var(--gold);transition:width .35s;
+}
+.n-a:hover{color:var(--white)}
+.n-a:hover::after{width:100%}
+.n-right{display:flex;align-items:center;gap:.875rem}
+.n-user{display:none;align-items:center;gap:.75rem;font-size:.75rem;color:var(--light)}
+.n-user.show{display:flex}
+.n-avatar{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--gold);background:var(--dim);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;color:var(--gold);
+}
+#btn-out{
+  background:none;border:none;color:var(--muted);
+  font-size:.62rem;letter-spacing:2px;text-transform:uppercase;transition:color .2s;
+}
+#btn-out:hover{color:var(--gold)}
+#btn-in{
+  background:none;border:1px solid var(--border-h);color:var(--light);
+  padding:.42rem 1rem;font-size:.62rem;letter-spacing:2.5px;text-transform:uppercase;
+  border-radius:1px;transition:all .22s;
+}
+#btn-in:hover{border-color:var(--gold);color:var(--gold)}
+.n-cart{
+  background:var(--gold);color:var(--bg);border:none;
+  padding:.5rem 1.3rem;font-size:.68rem;letter-spacing:2px;text-transform:uppercase;font-weight:700;
+  display:flex;align-items:center;gap:.5rem;border-radius:1px;
+  transition:background .2s,transform .15s,box-shadow .22s;
+}
+.n-cart:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 6px 22px var(--glow)}
+.n-cart:active{transform:translateY(0)}
+#cc{
+  background:var(--bg);color:var(--gold);border-radius:50%;
+  width:18px;height:18px;font-size:.6rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
+#cc.pop{animation:cpop .35s ease}
+@keyframes cpop{0%,100%{transform:scale(1)}50%{transform:scale(1.9)}}
+
+/* ══════════════════════════════════════════
+   HERO
+══════════════════════════════════════════ */
+.hero{
+  min-height:100vh;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding-top:70px;
+}
+.hero-grad{
+  position:absolute;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 55% at 15% 50%,rgba(255,215,90,.055) 0%,transparent 65%),
+    radial-gradient(ellipse 55% 65% at 85% 25%,rgba(255,215,90,.03) 0%,transparent 55%),
+    radial-gradient(ellipse 90% 40% at 50% 105%,rgba(255,215,90,.045) 0%,transparent 60%);
+  animation:hg 14s ease-in-out infinite alternate;
+}
+@keyframes hg{0%{transform:scale(1)}100%{transform:scale(1.06) translateX(-8px)}}
+.hero-diag{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    62deg,transparent,transparent 90px,
+    rgba(255,215,90,.011) 90px,rgba(255,215,90,.011) 91px
+  );
+}
+.hero-ghost{
+  position:absolute;z-index:0;
+  font-family:'Cormorant Garamond',serif;font-size:30vw;font-weight:300;
+  color:transparent;-webkit-text-stroke:1px rgba(255,215,90,.035);
+  white-space:nowrap;top:50%;transform:translateY(-50%);
+  pointer-events:none;user-select:none;letter-spacing:-4px;
+  animation:hgh 22s ease-in-out infinite alternate;
+}
+@keyframes hgh{0%{transform:translateY(-50%) translateX(0)}100%{transform:translateY(-52%) translateX(-2%)}}
+.hero-inner{
+  position:relative;z-index:2;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:2rem;padding:2rem;
+}
+.h-eyebrow{
+  display:flex;align-items:center;gap:1rem;
+  font-size:.6rem;letter-spacing:6px;text-transform:uppercase;color:var(--gold);
+  opacity:0;transform:translateY(14px);animation:up .8s ease .25s forwards;
+}
+.h-line{width:36px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+.h-line.r{background:linear-gradient(90deg,var(--gold),transparent)}
+.h-title{
+  font-family:'Cormorant Garamond',serif;font-weight:300;
+  font-size:clamp(5rem,13vw,14rem);line-height:.85;letter-spacing:-2px;
+  opacity:0;transform:translateY(40px);animation:up 1s ease .35s forwards;
+}
+.h-title em{
+  font-style:italic;display:block;
+  background:linear-gradient(135deg,var(--gold2) 0%,var(--gold) 45%,var(--gold3) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.h-sub{
+  font-size:.78rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);
+  opacity:0;animation:up .8s ease .55s forwards;
+}
+.h-btns{
+  display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;
+  opacity:0;animation:up .8s ease .7s forwards;
+}
+.btn-g{
+  background:var(--gold);color:var(--bg);border:none;
+  padding:.95rem 2.75rem;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;border-radius:1px;
+  transition:background .2s,transform .15s,box-shadow .22s;
+}
+.btn-g:hover{background:var(--gold2);transform:translateY(-2px);box-shadow:0 10px 36px var(--glow)}
+.btn-g:active{transform:translateY(0)}
+.btn-o{
+  background:none;color:var(--white);border:1px solid rgba(255,255,255,.15);
+  padding:.95rem 2.75rem;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;
+  border-radius:1px;transition:border-color .22s,background .22s;
+}
+.btn-o:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.04)}
+.h-scroll{
+  position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:.75rem;
+  opacity:0;animation:up .6s ease 1.1s forwards;
+}
+.scroll-m{
+  width:22px;height:34px;border:1px solid rgba(255,215,90,.28);
+  border-radius:12px;position:relative;
+}
+.scroll-w{
+  width:2px;height:6px;background:var(--gold);border-radius:1px;
+  position:absolute;left:50%;top:6px;transform:translateX(-50%);
+  animation:sw 2.2s ease-in-out infinite;
+}
+@keyframes sw{0%,100%{opacity:1;transform:translateX(-50%) translateY(0)}60%{opacity:0;transform:translateX(-50%) translateY(12px)}}
+.scroll-l{font-size:.56rem;letter-spacing:5px;text-transform:uppercase;color:var(--muted)}
+@keyframes up{to{opacity:1;transform:translateY(0)}}
+
+/* ══════════════════════════════════════════
+   MARQUEE
+══════════════════════════════════════════ */
+.mq{
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  background:var(--surface);overflow:hidden;padding:.85rem 0;
+}
+.mq-track{
+  display:flex;white-space:nowrap;
+  animation:mq-s 30s linear infinite;
+}
+.mq-item{
+  flex-shrink:0;padding:0 2.5rem;
+  font-size:.6rem;letter-spacing:4px;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:.875rem;
+  border-right:1px solid var(--border);
+}
+.mq-gem{color:var(--gold);font-size:.45rem}
+@keyframes mq-s{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ══════════════════════════════════════════
+   STATS
+══════════════════════════════════════════ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border)}
+.st{
+  padding:3.5rem 2rem;text-align:center;
+  border-right:1px solid var(--border);
+  opacity:0;transform:translateY(18px);
+  transition:opacity .55s,transform .55s;position:relative;overflow:hidden;
+}
+.st:last-child{border-right:none}
+.st.in{opacity:1;transform:translateY(0)}
+.st::after{
+  content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:0;height:1px;background:var(--gold);transition:width .7s .2s;
+}
+.st.in::after{width:35%}
+.st-n{
+  font-family:'Cormorant Garamond',serif;font-size:3.5rem;font-weight:300;
+  color:var(--gold);line-height:1;margin-bottom:.4rem;letter-spacing:-1px;
+}
+.st-l{font-size:.58rem;letter-spacing:4px;text-transform:uppercase;color:var(--muted)}
+
+/* ══════════════════════════════════════════
+   COLLECTION
+══════════════════════════════════════════ */
+.sec{padding:7rem 3.5rem;max-width:1440px;margin:0 auto}
+.sec-hd{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  margin-bottom:4rem;flex-wrap:wrap;gap:1.5rem;
+}
+.sec-t{
+  font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,6vw,5.5rem);
+  font-weight:300;letter-spacing:-1px;line-height:.9;
+}
+.sec-t span{
+  font-style:italic;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.filters{display:flex;gap:.5rem;flex-wrap:wrap}
+.flt{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  padding:.42rem 1.3rem;border-radius:1px;
+  font-size:.6rem;letter-spacing:3px;text-transform:uppercase;transition:all .22s;
+}
+.flt:hover{border-color:var(--border-h);color:var(--white)}
+.flt.on{border-color:var(--gold);color:var(--gold);background:var(--dim)}
+
+/* ══════════════════════════════════════════
+   PRODUCTS
+══════════════════════════════════════════ */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:2px}
+.pc{
+  background:var(--card);position:relative;overflow:hidden;
+  opacity:0;transform:translateY(22px) scale(.985);
+  transition:opacity .55s,transform .55s,box-shadow .3s;
+}
+.pc.in{opacity:1;transform:translateY(0) scale(1)}
+.pc:hover{box-shadow:0 0 0 1px rgba(255,215,90,.12),0 28px 70px rgba(0,0,0,.55)}
+.pw{overflow:hidden;aspect-ratio:3/4;position:relative}
+.pw img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .8s cubic-bezier(.4,0,.2,1),filter .5s;
+  filter:brightness(.9) saturate(.8);
+}
+.pc:hover .pw img{transform:scale(1.07);filter:brightness(1) saturate(1)}
+.pbdg{
+  position:absolute;top:1rem;left:1rem;z-index:3;
+  border:1px solid var(--gold);color:var(--gold);
+  font-size:.56rem;padding:4px 10px;letter-spacing:2.5px;text-transform:uppercase;
+  background:rgba(5,5,8,.72);backdrop-filter:blur(8px);
+}
+.pveil{
+  position:absolute;inset:0;z-index:2;
+  background:linear-gradient(to top,rgba(5,5,8,.95) 0%,rgba(5,5,8,.35) 45%,transparent 72%);
+  display:flex;align-items:flex-end;padding:1.5rem;
+  opacity:0;transition:opacity .35s;
+}
+.pc:hover .pveil{opacity:1}
+.padd{
+  width:100%;background:var(--gold);color:var(--bg);border:none;
+  padding:.78rem;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;
+  transform:translateY(10px);opacity:0;
+  transition:transform .32s,opacity .32s,background .2s;
+}
+.pc:hover .padd{transform:translateY(0);opacity:1}
+.padd:hover{background:var(--gold2)}
+.pin{padding:1.2rem}
+.pcat{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.pnm{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:400;margin-bottom:.85rem;letter-spacing:.5px}
+.prw{display:flex;justify-content:space-between;align-items:center}
+.ppr{font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:300;color:var(--gold)}
+.pqk{
+  width:33px;height:33px;border-radius:50%;border:1px solid var(--border);
+  background:none;color:var(--muted);font-size:1.1rem;
+  display:flex;align-items:center;justify-content:center;transition:all .22s;
+}
+.pqk:hover{border-color:var(--gold);color:var(--gold);background:var(--dim)}
+
+/* ══════════════════════════════════════════
+   PROMO
+══════════════════════════════════════════ */
+.promo{
+  position:relative;overflow:hidden;padding:6.5rem 3.5rem;text-align:center;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,var(--surface),rgba(255,215,90,.025),var(--surface));
+}
+.promo-ghost{
+  position:absolute;font-family:'Cormorant Garamond',serif;font-size:18vw;font-weight:300;
+  color:transparent;-webkit-text-stroke:1px rgba(255,215,90,.045);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  white-space:nowrap;pointer-events:none;letter-spacing:4px;
+}
+.promo-tag{font-size:.58rem;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;position:relative;z-index:1}
+.promo-t{
+  font-family:'Cormorant Garamond',serif;font-size:clamp(2.5rem,6vw,5.5rem);
+  font-weight:300;letter-spacing:-1px;line-height:1;position:relative;z-index:1;margin-bottom:.75rem;
+}
+.promo-s{color:var(--muted);font-size:.7rem;letter-spacing:3px;text-transform:uppercase;position:relative;z-index:1;margin-bottom:2.25rem}
+.promo-code{
+  display:inline-block;border:1px solid var(--border-h);
+  padding:.6rem 2rem;font-size:.68rem;letter-spacing:5px;text-transform:uppercase;
+  color:var(--gold);background:var(--dim);position:relative;z-index:1;border-radius:1px;
+}
+
+/* ══════════════════════════════════════════
+   CART DRAWER
+══════════════════════════════════════════ */
+.cov{
+  position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(10px);
+  z-index:600;opacity:0;visibility:hidden;transition:all .35s;
+}
+.cov.on{opacity:1;visibility:visible}
+.cdr{
+  position:fixed;top:0;right:-480px;width:440px;max-width:100vw;height:100vh;
+  background:#0c0c12;border-left:1px solid var(--border);
+  z-index:601;display:flex;flex-direction:column;
+  transition:right .42s cubic-bezier(.4,0,.2,1);
+}
+.cdr.on{right:0}
+.chd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.75rem 2rem;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.cht{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;letter-spacing:4px;text-transform:uppercase}
+.cx{
+  width:35px;height:35px;border-radius:50%;border:1px solid var(--border);
+  background:none;color:var(--muted);font-size:.78rem;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.cx:hover{border-color:var(--gold);color:var(--gold)}
+.cbody{flex:1;overflow-y:auto;padding:1.25rem 2rem}
+.cbody::-webkit-scrollbar{width:2px}
+.cbody::-webkit-scrollbar-thumb{background:var(--border)}
+.cempty{
+  height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1rem;text-align:center;
+}
+.cempty-i{font-size:2.8rem;opacity:.18}
+.cempty-t{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:300;letter-spacing:2px;color:var(--muted)}
+.ci{
+  display:flex;gap:1rem;padding:1.2rem 0;border-bottom:1px solid var(--border);
+  animation:cin .28s ease;
+}
+@keyframes cin{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+.ci img{width:68px;height:84px;object-fit:cover;border-radius:1px;flex-shrink:0}
+.cinfo{flex:1;min-width:0}
+.cin2{font-family:'Cormorant Garamond',serif;font-size:.98rem;font-weight:400;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cip{color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:300;margin-bottom:.55rem}
+.cirw{display:flex;align-items:center;gap:.55rem}
+.qb{
+  width:26px;height:26px;border:1px solid var(--border);background:none;
+  color:var(--white);border-radius:1px;font-size:.85rem;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.qb:hover{border-color:var(--gold);color:var(--gold)}
+.qv{font-size:.82rem;font-weight:600;min-width:18px;text-align:center}
+.crm{background:none;border:none;color:var(--muted);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;margin-left:auto;transition:color .2s}
+.crm:hover{color:var(--gold)}
+.cft{padding:1.5rem 2rem;border-top:1px solid var(--border);flex-shrink:0}
+.ctot{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1.2rem}
+.ctotl{font-size:.6rem;letter-spacing:4px;text-transform:uppercase;color:var(--muted)}
+.ctotv{font-family:'Cormorant Garamond',serif;font-size:2.1rem;font-weight:300;color:var(--gold)}
+.cck{
+  width:100%;background:var(--gold);color:var(--bg);border:none;
+  padding:1.05rem;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;border-radius:1px;
+  transition:background .2s,transform .15s,box-shadow .2s;
+}
+.cck:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 8px 28px var(--glow)}
+.cck:active{transform:translateY(0)}
+
+/* ══════════════════════════════════════════
+   PAYMENT MODAL
+══════════════════════════════════════════ */
+.pay-wrap{
+  position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(14px);
+  z-index:700;display:none;align-items:center;justify-content:center;padding:1rem;
+}
+.pay-wrap.on{display:flex}
+.pay-modal{
+  background:var(--card);border:1px solid var(--border);
+  width:100%;max-width:880px;max-height:92vh;overflow-y:auto;
+  display:grid;grid-template-columns:1fr 1fr;position:relative;
+  animation:mpop .4s cubic-bezier(.4,0,.2,1);
+}
+@media(max-width:680px){.pay-modal{grid-template-columns:1fr}}
+.pay-x{
+  position:absolute;top:1rem;right:1rem;z-index:3;
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+  background:none;color:var(--muted);font-size:.78rem;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.pay-x:hover{border-color:var(--gold);color:var(--gold)}
+/* Left — card preview */
+.pay-left{
+  padding:2.5rem 2rem;display:flex;flex-direction:column;gap:2rem;
+  background:linear-gradient(145deg,rgba(255,215,90,.06),rgba(255,215,90,.015));
+  border-right:1px solid var(--border);
+}
+.card-3d{
+  background:linear-gradient(135deg,#141428 0%,#1a1a3a 45%,#0e2044 100%);
+  border-radius:18px;padding:1.75rem;aspect-ratio:1.586/1;position:relative;overflow:hidden;
+  box-shadow:0 24px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.card-3d::before{
+  content:'';position:absolute;top:-40%;right:-20%;
+  width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,215,90,.14),transparent 62%);
+}
+.card-3d-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.75rem}
+.chip{
+  width:42px;height:32px;border-radius:6px;
+  background:linear-gradient(135deg,#d4a843,#f7c94e,#c8960a);
+  display:flex;flex-direction:column;justify-content:center;padding:0 6px;gap:4px;
+}
+.chip-l{height:2px;background:rgba(0,0,0,.28);border-radius:1px}
+.card-brand{
+  font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:300;
+  letter-spacing:4px;color:rgba(255,255,255,.75);text-transform:uppercase;
+}
+.card-num-prev{
+  font-family:'Courier New',monospace;font-size:1.05rem;letter-spacing:3px;
+  color:rgba(255,255,255,.88);margin-bottom:1.4rem;
+}
+.card-3d-bot{display:flex;justify-content:space-between;align-items:flex-end}
+.card-lbl{font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.38);margin-bottom:.22rem}
+.card-val{font-size:.8rem;font-weight:500;color:rgba(255,255,255,.82);letter-spacing:1px}
+/* Summary */
+.pay-sum{
+  background:rgba(255,215,90,.05);border:1px solid var(--border);
+  padding:1.2rem;border-radius:1px;
+}
+.pay-sum-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem}
+.pay-sum-row span:first-child{font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.pay-sum-amt{font-family:'Cormorant Garamond',serif;font-size:1.85rem;font-weight:300;color:var(--gold)}
+.pay-sec{font-size:.65rem;color:var(--muted);letter-spacing:.4px;display:flex;align-items:center;gap:.45rem}
+/* Right — form */
+.pay-right{padding:2.5rem 2rem;display:flex;flex-direction:column;gap:1.2rem}
+.pay-title{font-family:'Cormorant Garamond',serif;font-size:1.75rem;font-weight:300;letter-spacing:1px}
+.pay-sub2{font-size:.65rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted)}
+.pm-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.pm-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  padding:.72rem;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;
+  border-radius:1px;display:flex;align-items:center;justify-content:center;gap:.45rem;
+  transition:all .22s;
+}
+.pm-btn:hover{border-color:var(--border-h);color:var(--white)}
+.pm-btn.on{border-color:var(--gold);color:var(--gold);background:var(--dim)}
+.pf{display:flex;flex-direction:column;gap:.38rem}
+.pl{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
+.pi{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--white);padding:.8rem 1rem;font-family:'Syne',sans-serif;
+  font-size:.85rem;outline:none;border-radius:1px;transition:border-color .22s;
+}
+.pi:focus{border-color:var(--gold);background:rgba(255,215,90,.02)}
+.pi::placeholder{color:var(--muted)}
+.pf-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.pp-box{
+  background:rgba(0,60,170,.12);border:1px solid rgba(0,60,170,.25);
+  padding:1.5rem;text-align:center;border-radius:1px;
+}
+.pp-logo{font-size:1.35rem;font-weight:700;color:#009cde;letter-spacing:-1px}
+.pp-logo span{color:#003087}
+.pp-sub{font-size:.72rem;color:var(--muted);margin-top:.4rem;letter-spacing:.3px}
+.pay-err{color:var(--red);font-size:.72rem;min-height:.9rem}
+.pay-btn{
+  background:var(--gold);color:var(--bg);border:none;
+  padding:1.05rem;font-size:.72rem;letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;border-radius:1px;
+  transition:background .2s,transform .15s,box-shadow .2s;
+}
+.pay-btn:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 8px 28px var(--glow)}
+.pay-btn:disabled{opacity:.5;transform:none;cursor:not-allowed}
+.pay-note{font-size:.64rem;color:var(--muted);text-align:center;letter-spacing:.3px}
+
+/* ══════════════════════════════════════════
+   SUCCESS MODAL
+══════════════════════════════════════════ */
+.suc-wrap{
+  position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(16px);
+  z-index:800;display:none;align-items:center;justify-content:center;padding:1.5rem;
+}
+.suc-wrap.on{display:flex}
+.suc-modal{
+  background:var(--card);border:1px solid var(--border);
+  width:100%;max-width:440px;padding:3rem 2.5rem;text-align:center;
+  animation:mpop .5s cubic-bezier(.4,0,.2,1);
+}
+.suc-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--dim);border:1px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;color:var(--gold);margin:0 auto 1.5rem;
+  animation:suc-pop .6s cubic-bezier(.4,0,.2,1);
+}
+@keyframes suc-pop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+.suc-title{font-family:'Cormorant Garamond',serif;font-size:2.1rem;font-weight:300;margin-bottom:.4rem;letter-spacing:1px}
+.suc-sub{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem}
+.suc-amt{
+  background:var(--dim);border:1px solid var(--border);
+  padding:1rem;font-size:.82rem;letter-spacing:.5px;margin-bottom:1.5rem;border-radius:1px;
+}
+.suc-amt strong{color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:300}
+.suc-msg{font-size:.76rem;color:var(--muted);line-height:1.75;margin-bottom:2rem;letter-spacing:.3px}
+.suc-btn{
+  background:var(--gold);color:var(--bg);border:none;
+  padding:1rem 2.5rem;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;border-radius:1px;transition:background .2s,transform .15s;
+}
+.suc-btn:hover{background:var(--gold2);transform:translateY(-1px)}
+
+/* ══════════════════════════════════════════
+   AUTH MODAL
+══════════════════════════════════════════ */
+.mwrap{
+  position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(14px);
+  z-index:750;display:none;align-items:center;justify-content:center;padding:1.5rem;
+}
+.mwrap.on{display:flex}
+.mbox{
+  background:var(--card);border:1px solid var(--border);
+  width:100%;max-width:420px;padding:2.75rem;position:relative;
+  animation:mpop .38s cubic-bezier(.4,0,.2,1);
+}
+@keyframes mpop{from{opacity:0;transform:scale(.92) translateY(22px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mx{
+  position:absolute;top:1.1rem;right:1.1rem;
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+  background:none;color:var(--muted);font-size:.75rem;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.mx:hover{border-color:var(--gold);color:var(--gold)}
+.mbrand{
+  font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300;
+  letter-spacing:8px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:1.85rem;
+}
+.mtabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.85rem}
+.mtab{
+  flex:1;padding:.75rem;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;
+  background:none;border:none;color:var(--muted);position:relative;transition:color .22s;
+}
+.mtab::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:var(--gold);transform:scaleX(0);transition:transform .32s;
+}
+.mtab.on{color:var(--white)}
+.mtab.on::after{transform:scaleX(1)}
+.mform{display:none}
+.mform.on{display:block}
+.mfld{margin-bottom:1rem}
+.mlbl{display:block;font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:.45rem}
+.minp{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  color:var(--white);padding:.82rem 1rem;font-family:'Syne',sans-serif;
+  font-size:.85rem;outline:none;border-radius:1px;transition:border-color .22s;
+}
+.minp:focus{border-color:var(--gold);background:rgba(255,215,90,.02)}
+.minp::placeholder{color:var(--muted)}
+.merr{color:var(--red);font-size:.72rem;min-height:1rem;margin-top:.3rem}
+.mok{color:var(--green);font-size:.72rem;min-height:1rem;margin-top:.3rem}
+.mbtn{
+  width:100%;background:var(--gold);color:var(--bg);border:none;
+  padding:.95rem;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;border-radius:1px;margin-top:.4rem;
+  transition:background .2s,transform .15s;
+}
+.mbtn:hover{background:var(--gold2);transform:translateY(-1px)}
+.mbtn:disabled{opacity:.5;transform:none}
+.mnote{text-align:center;font-size:.72rem;color:var(--muted);margin-top:1rem;letter-spacing:.3px}
+.mnote a{color:var(--gold)}
+.mconf{display:none;text-align:center;padding:1rem 0}
+.mconf.on{display:block}
+.mconf-icon{font-size:2.75rem;margin-bottom:1.25rem;animation:mfloat 3s ease-in-out infinite}
+@keyframes mfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.mconf-title{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:300;margin-bottom:.6rem;letter-spacing:1px}
+.mconf-sub{color:var(--muted);font-size:.78rem;line-height:1.75;letter-spacing:.3px}
+.mconf-em{color:var(--gold);font-weight:500}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+.toast{
+  position:fixed;bottom:2.5rem;left:50%;
+  transform:translateX(-50%) translateY(65px);
+  background:var(--white);color:var(--bg);
+  padding:.88rem 1.9rem;font-size:.76rem;font-weight:600;letter-spacing:.5px;
+  z-index:900;border-radius:1px;pointer-events:none;white-space:nowrap;
+  transition:transform .38s cubic-bezier(.4,0,.2,1);
+}
+.toast.on{transform:translateX(-50%) translateY(0)}
+
+/* ══════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════ */
+footer{
+  border-top:1px solid var(--border);padding:3.5rem 3.5rem 2.5rem;
+  background:var(--surface);
+}
+.f-top{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;gap:3rem;margin-bottom:3rem;
+}
+.f-brand{margin-bottom:1rem}
+.f-logo{
+  font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:300;
+  letter-spacing:8px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  display:block;margin-bottom:.75rem;
+}
+.f-tagline{font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
+.f-col h4{
+  font-size:.6rem;letter-spacing:4px;text-transform:uppercase;color:var(--gold);
+  margin-bottom:1.25rem;
+}
+.f-col a{
+  display:block;font-size:.75rem;color:var(--muted);text-decoration:none;
+  letter-spacing:.5px;margin-bottom:.65rem;transition:color .2s;
+}
+.f-col a:hover{color:var(--white)}
+.f-contact p{font-size:.78rem;color:var(--muted);letter-spacing:.5px;margin-bottom:.5rem}
+.f-contact a{display:inline-flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--muted);text-decoration:none;letter-spacing:.5px;transition:color .2s}
+.f-contact a:hover{color:var(--gold)}
+.f-insta{
+  display:inline-flex;align-items:center;gap:.6rem;
+  background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);
+  padding:.55rem 1.2rem;border-radius:2px;color:white;text-decoration:none;
+  font-size:.68rem;letter-spacing:2px;text-transform:uppercase;font-weight:600;
+  transition:transform .2s,box-shadow .2s;margin-top:.5rem;
+}
+.f-insta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(253,29,29,.3);color:white}
+.f-bottom{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;
+  padding-top:2rem;border-top:1px solid var(--border);
+}
+.f-copy{font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.f-payments{display:flex;gap:.75rem;align-items:center}
+.f-pay-badge{
+  background:var(--card);border:1px solid var(--border);
+  padding:.3rem .7rem;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);
+  border-radius:2px;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media(max-width:900px){
+  nav{padding:0 1.5rem}
+  .n-links{display:none}
+  .sec{padding:4.5rem 1.5rem}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .st:nth-child(2){border-right:none}
+  .st:nth-child(3){border-top:1px solid var(--border)}
+  footer{padding:2.5rem 1.5rem}
+  .f-top{gap:2rem}
+  body{cursor:auto}
+  #cur,#cur-r{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cur"></div>
+<div id="cur-r"></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="l-logo">DRIP</div>
+  <div class="l-track"><div class="l-fill"></div></div>
+  <div class="l-label">Loading Collection</div>
+</div>
+
+<!-- NAVBAR -->
+<nav id="nav">
+  <div class="n-logo">Drip</div>
+  <div class="n-links">
+    <a href="#collection" class="n-a">Collection</a>
+    <a href="#tshirts" class="n-a">T-Shirts</a>
+    <a href="#jeans" class="n-a">Jeans</a>
+    <a href="#footer-contact" class="n-a">Contact</a>
+  </div>
+  <div class="n-right">
+    <div class="n-user" id="nu">
+      <div class="n-avatar" id="nav-av"></div>
+      <span id="nav-nm"></span>
+      <button id="btn-out" onclick="signOut()">Sign out</button>
+    </div>
+    <button id="btn-in" onclick="openModal()">Sign in</button>
+    <button class="n-cart" onclick="openCart()">Cart <span id="cc">0</span></button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-grad"></div>
+  <div class="hero-diag"></div>
+  <div class="hero-ghost">Drip</div>
+  <div class="hero-inner">
+    <div class="h-eyebrow">
+      <div class="h-line"></div>New Collection 2025<div class="h-line r"></div>
+    </div>
+    <h1 class="h-title">Wear<em>Different</em></h1>
+    <p class="h-sub">Premium T-Shirts & Jeans — Free Shipping Over $50</p>
+    <div class="h-btns">
+      <button class="btn-g" onclick="goTo('collection')">Shop Collection</button>
+      <button class="btn-o" onclick="openModal()">Create Account</button>
+    </div>
+  </div>
+  <div class="h-scroll">
+    <div class="scroll-m"><div class="scroll-w"></div></div>
+    <div class="scroll-l">Scroll</div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="mq"><div class="mq-track" id="mqt"></div></div>
+
+<!-- STATS -->
+<div class="stats" id="stats">
+  <div class="st"><div class="st-n">200+</div><div class="st-l">Unique Styles</div></div>
+  <div class="st"><div class="st-n">15K</div><div class="st-l">Happy Customers</div></div>
+  <div class="st"><div class="st-n">100%</div><div class="st-l">Premium Cotton</div></div>
+  <div class="st"><div class="st-n">Free</div><div class="st-l">Shipping +$50</div></div>
+</div>
+
+<!-- COLLECTION -->
+<div class="sec" id="collection">
+  <div class="sec-hd">
+    <h2 class="sec-t">The <span>Collection</span></h2>
+    <div class="filters">
+      <button class="flt on" onclick="doFilter('all',this)">All</button>
+      <button class="flt" id="fbt" onclick="doFilter('tshirt',this)">T-Shirts</button>
+      <button class="flt" id="fbj" onclick="doFilter('jeans',this)">Jeans</button>
+    </div>
+  </div>
+  <div class="pgrid" id="pgrid"></div>
+</div>
+
+<!-- PROMO -->
+<div class="promo" id="jeans">
+  <div class="promo-ghost">Free Shipping</div>
+  <div class="promo-tag">✦ Limited Offer ✦</div>
+  <div class="promo-t">Free Shipping<br>Over $50</div>
+  <div class="promo-s">Use the code below at checkout</div>
+  <div class="promo-code">DRIP10 — 10% OFF</div>
+</div>
+
+<!-- CART DRAWER -->
+<div class="cov" id="cov" onclick="closeCart()"></div>
+<div class="cdr" id="cdr">
+  <div class="chd">
+    <div class="cht">Your Cart</div>
+    <button class="cx" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cbody" id="cbody"></div>
+  <div class="cft">
+    <div class="ctot">
+      <span class="ctotl">Total</span>
+      <span class="ctotv" id="ctotv">$0.00</span>
+    </div>
+    <button class="cck" onclick="doCheckout()">Checkout →</button>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="pay-wrap" id="paywrap">
+  <div class="pay-modal">
+    <button class="pay-x" onclick="closePay()">✕</button>
+    <div class="pay-left">
+      <div class="card-3d">
+        <div class="card-3d-top">
+          <div class="chip"><div class="chip-l"></div><div class="chip-l"></div><div class="chip-l"></div></div>
+          <div class="card-brand">Drip</div>
+        </div>
+        <div class="card-num-prev" id="prev-num">•••• •••• •••• ••••</div>
+        <div class="card-3d-bot">
+          <div><div class="card-lbl">Cardholder</div><div class="card-val" id="prev-name">YOUR NAME</div></div>
+          <div><div class="card-lbl">Expires</div><div class="card-val" id="prev-exp">MM/YY</div></div>
+        </div>
+      </div>
+      <div class="pay-sum">
+        <div class="pay-sum-row">
+          <span>Order Total</span>
+          <span class="pay-sum-amt" id="pay-total">$0.00</span>
+        </div>
+        <div class="pay-sec">🔒 Secured & encrypted payment</div>
+      </div>
+    </div>
+    <div class="pay-right">
+      <div class="pay-title">Complete Your Order</div>
+      <div class="pay-sub2">Choose payment method</div>
+      <div class="pm-row">
+        <button class="pm-btn" id="pm-card" onclick="selPay('card')">💳 Credit Card</button>
+        <button class="pm-btn" id="pm-pp" onclick="selPay('pp')">🅿️ PayPal</button>
+      </div>
+      <!-- Card form -->
+      <div id="card-form">
+        <div class="pf"><label class="pl">Cardholder Name</label>
+          <input class="pi" type="text" id="c-name" placeholder="John Doe" oninput="updCard()"/></div>
+        <div class="pf"><label class="pl">Card Number</label>
+          <input class="pi" type="text" id="c-num" placeholder="1234 5678 9012 3456" maxlength="19" oninput="fmtCard(event)"/></div>
+        <div class="pf-row">
+          <div class="pf"><label class="pl">Expiry</label>
+            <input class="pi" type="text" id="c-exp" placeholder="MM/YY" maxlength="5" oninput="fmtExp(event)"/></div>
+          <div class="pf"><label class="pl">CVV</label>
+            <input class="pi" type="text" id="c-cvv" placeholder="123" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')"/></div>
+        </div>
+      </div>
+      <!-- PayPal form -->
+      <div id="pp-form" style="display:none">
+        <div class="pp-box">
+          <div class="pp-logo">Pay<span>Pal</span></div>
+          <div class="pp-sub">Enter your PayPal email address</div>
+        </div>
+        <div class="pf"><label class="pl">PayPal Email</label>
+          <input class="pi" type="email" id="pp-em" placeholder="you@paypal.com"/></div>
+      </div>
+      <div class="pay-err" id="pay-err"></div>
+      <button class="pay-btn" id="pay-confirm" onclick="confirmPay()">Pay Now →</button>
+      <div class="pay-note">🔒 Your information is safe and encrypted</div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="suc-wrap" id="sucwrap">
+  <div class="suc-modal">
+    <div class="suc-icon">✓</div>
+    <div class="suc-title">Order Confirmed!</div>
+    <div class="suc-sub">Thank you for your purchase</div>
+    <div class="suc-amt">Amount paid: <strong id="suc-amt"></strong></div>
+    <div class="suc-msg">A confirmation email has been sent to your inbox.<br>Your items will arrive in 3–5 business days. 📦</div>
+    <button class="suc-btn" onclick="closeSuc()">Continue Shopping →</button>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="mwrap" id="mwrap">
+  <div class="mbox">
+    <button class="mx" onclick="closeModal()">✕</button>
+    <div class="mbrand">Drip</div>
+    <div class="mtabs">
+      <button class="mtab on" id="t-in" onclick="swTab('in')">Sign In</button>
+      <button class="mtab" id="t-up" onclick="swTab('up')">Sign Up</button>
+    </div>
+    <!-- Login -->
+    <div class="mform on" id="f-in">
+      <div class="mfld"><label class="mlbl">Email</label>
+        <input class="minp" type="email" id="l-em" placeholder="your@email.com"/></div>
+      <div class="mfld"><label class="mlbl">Password</label>
+        <input class="minp" type="password" id="l-pw" placeholder="••••••••"
+               onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div class="merr" id="l-err"></div>
+      <button class="mbtn" onclick="doLogin()" id="l-btn">Sign In</button>
+      <div class="mnote">No account? <a onclick="swTab('up')">Sign up free →</a></div>
+    </div>
+    <!-- Signup -->
+    <div class="mform" id="f-up">
+      <div class="mfld"><label class="mlbl">Full Name</label>
+        <input class="minp" type="text" id="s-nm" placeholder="Your full name"/></div>
+      <div class="mfld"><label class="mlbl">Email</label>
+        <input class="minp" type="email" id="s-em" placeholder="your@email.com"/></div>
+      <div class="mfld"><label class="mlbl">Password</label>
+        <input class="minp" type="password" id="s-pw" placeholder="Min 6 characters"
+               onkeydown="if(event.key==='Enter')doSignup()"/></div>
+      <div class="merr" id="s-err"></div>
+      <button class="mbtn" onclick="doSignup()" id="s-btn">Create Account</button>
+      <div class="mnote">Already registered? <a onclick="swTab('in')">Sign in →</a></div>
+    </div>
+    <!-- Confirm screen -->
+    <div class="mconf" id="mconf">
+      <div class="mconf-icon">✉️</div>
+      <div class="mconf-title">Check Your Inbox</div>
+      <div class="mconf-sub">
+        We sent a confirmation link to<br>
+        <span class="mconf-em" id="conf-em"></span><br><br>
+        Click the link in the email to activate your account.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- FOOTER -->
+<footer id="footer-contact">
+  <div class="f-top">
+    <div class="f-brand">
+      <span class="f-logo">Drip</span>
+      <div class="f-tagline">Premium T-Shirts & Jeans</div>
+    </div>
+    <div class="f-col">
+      <h4>Shop</h4>
+      <a onclick="doFilter('all',document.querySelector('.flt'));goTo('collection')">All Products</a>
+      <a onclick="doFilter('tshirt',document.getElementById('fbt'));goTo('collection')">T-Shirts</a>
+      <a onclick="doFilter('jeans',document.getElementById('fbj'));goTo('collection')">Jeans</a>
+    </div>
+    <div class="f-col">
+      <h4>Account</h4>
+      <a onclick="openModal()">Sign In</a>
+      <a onclick="swTab('up');openModal()">Create Account</a>
+    </div>
+    <div class="f-col f-contact" id="footer-contact">
+      <h4>Contact Us</h4>
+      <a href="tel:+213666303626">📞 +213 666 303 626</a>
+      <a href="https://www.instagram.com/visionintro.it.com.213/" target="_blank" class="f-insta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        @visionintro.it.com.213
+      </a>
+    </div>
+  </div>
+  <div class="f-bottom">
+    <div class="f-copy">© 2025 Drip — All rights reserved.</div>
+    <div class="f-payments">
+      <div class="f-pay-badge">Visa</div>
+      <div class="f-pay-badge">Mastercard</div>
+      <div class="f-pay-badge">PayPal</div>
+      <div class="f-pay-badge">🔒 Secure</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════
+   SUPABASE
+═══════════════════════════════════════ */
+const SB_URL = 'https://ihatrkjvwcupujwqmtgs.supabase.co';
+const SB_KEY = 'sb_publishable_vzLdgLJvsgbfDGKUtDOIuw_MhJYPy4V';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+/* ═══════════════════════════════════════
+   PRODUCTS
+═══════════════════════════════════════ */
+const PRODS = [
+  {id:1,name:'Classic White Tee',cat:'tshirt',price:19.99,badge:'Bestseller',
+   img:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80'},
+  {id:2,name:'Black Oversized Tee',cat:'tshirt',price:24.99,badge:'New',
+   img:'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80'},
+  {id:3,name:'Vintage Stripe Tee',cat:'tshirt',price:22.99,badge:null,
+   img:'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80'},
+  {id:4,name:'Washed Grey Tee',cat:'tshirt',price:21.99,badge:'Sale',
+   img:'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600&q=80'},
+  {id:5,name:'Blue Slim Jeans',cat:'jeans',price:49.99,badge:'Bestseller',
+   img:'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80'},
+  {id:6,name:'Black Skinny Jeans',cat:'jeans',price:54.99,badge:'New',
+   img:'https://images.unsplash.com/photo-1541840031508-326c8a86a965?w=600&q=80'},
+  {id:7,name:'Ripped Denim',cat:'jeans',price:59.99,badge:null,
+   img:'https://images.unsplash.com/photo-1604176354204-9268737828e4?w=600&q=80'},
+  {id:8,name:'Light Wash Jeans',cat:'jeans',price:52.99,badge:'Sale',
+   img:'https://images.unsplash.com/photo-1555689502-c4b22d76c56f?w=600&q=80'},
+];
+
+/* ═══════════════════════════════════════
+   CART
+═══════════════════════════════════════ */
+let cart = JSON.parse(localStorage.getItem('drip_cart') || '[]');
+let user = null;
+
+function saveCart(){ localStorage.setItem('drip_cart', JSON.stringify(cart)) }
+function cartQty(){ return cart.reduce((s,i)=>s+i.qty,0) }
+function cartAmt(){ return cart.reduce((s,i)=>s+i.price*i.qty,0) }
+
+function updBadge(){
+  const el=document.getElementById('cc');
+  el.textContent=cartQty();
+  el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
+}
+
+function addToCart(id){
+  const p=PRODS.find(x=>x.id===id);
+  const ex=cart.find(x=>x.id===id);
+  if(ex){ex.qty++}else{cart.push({...p,qty:1})}
+  saveCart();updBadge();renderCart();
+  showToast('✓ '+p.name+' added to cart');
+}
+
+function chQty(id,d){
+  const it=cart.find(x=>x.id===id);if(!it)return;
+  it.qty+=d;
+  if(it.qty<=0)cart=cart.filter(x=>x.id!==id);
+  saveCart();updBadge();renderCart();
+}
+
+function rmItem(id){
+  cart=cart.filter(x=>x.id!==id);
+  saveCart();updBadge();renderCart();showToast('Item removed');
+}
+
+function renderCart(){
+  const b=document.getElementById('cbody');
+  document.getElementById('ctotv').textContent='$'+cartAmt().toFixed(2);
+  if(!cart.length){
+    b.innerHTML='<div class="cempty"><div class="cempty-i">✦</div><div class="cempty-t">Cart is Empty</div><p style="font-size:.72rem;color:var(--muted)">Add something beautiful</p></div>';
+    return;
+  }
+  b.innerHTML=cart.map(it=>`
+    <div class="ci">
+      <img src="${it.img}" alt="${it.name}" onerror="this.src='https://placehold.co/68x84/0f0f16/ffd75a?text=DRIP'"/>
+      <div class="cinfo">
+        <div class="cin2">${it.name}</div>
+        <div class="cip">$${it.price.toFixed(2)}</div>
+        <div class="cirw">
+          <button class="qb" onclick="chQty(${it.id},-1)">−</button>
+          <span class="qv">${it.qty}</span>
+          <button class="qb" onclick="chQty(${it.id},1)">+</button>
+          <button class="crm" onclick="rmItem(${it.id})">Remove</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openCart(){renderCart();document.getElementById('cov').classList.add('on');document.getElementById('cdr').classList.add('on')}
+function closeCart(){document.getElementById('cov').classList.remove('on');document.getElementById('cdr').classList.remove('on')}
+
+function doCheckout(){
+  if(!cart.length){showToast('Your cart is empty!');return}
+  if(!user){closeCart();openModal();showToast('Please sign in to checkout');return}
+  closeCart();openPay();
+}
+
+/* ═══════════════════════════════════════
+   PAYMENT
+═══════════════════════════════════════ */
+function openPay(){
+  document.getElementById('pay-total').textContent='$'+cartAmt().toFixed(2);
+  document.getElementById('paywrap').classList.add('on');
+  selPay('card');
+}
+function closePay(){document.getElementById('paywrap').classList.remove('on')}
+
+function selPay(m){
+  document.querySelectorAll('.pm-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pm-'+m).classList.add('on');
+  document.getElementById('card-form').style.display=m==='card'?'flex':'none';
+  document.getElementById('card-form').style.flexDirection='column';
+  document.getElementById('card-form').style.gap='1rem';
+  document.getElementById('pp-form').style.display=m==='pp'?'flex':'none';
+  document.getElementById('pp-form').style.flexDirection='column';
+  document.getElementById('pp-form').style.gap='1rem';
+}
+
+function fmtCard(e){
+  let v=e.target.value.replace(/\D/g,'').substring(0,16);
+  e.target.value=v.replace(/(.{4})/g,'$1 ').trim();
+  updCard();
+}
+function fmtExp(e){
+  let v=e.target.value.replace(/\D/g,'').substring(0,4);
+  if(v.length>2)v=v.substring(0,2)+'/'+v.substring(2);
+  e.target.value=v;updCard();
+}
+function updCard(){
+  const n=document.getElementById('c-num').value||'•••• •••• •••• ••••';
+  const e=document.getElementById('c-exp').value||'MM/YY';
+  const nm=document.getElementById('c-name').value||'YOUR NAME';
+  document.getElementById('prev-num').textContent=n;
+  document.getElementById('prev-exp').textContent=e;
+  document.getElementById('prev-name').textContent=nm.toUpperCase();
+}
+
+function confirmPay(){
+  const isCard=document.getElementById('pm-card').classList.contains('on');
+  const err=document.getElementById('pay-err');
+  const btn=document.getElementById('pay-confirm');
+  err.textContent='';
+  if(isCard){
+    const nm=document.getElementById('c-name').value.trim();
+    const num=document.getElementById('c-num').value.replace(/\s/g,'');
+    const exp=document.getElementById('c-exp').value;
+    const cvv=document.getElementById('c-cvv').value;
+    if(!nm){err.textContent='Please enter the cardholder name.';return}
+    if(num.length<16){err.textContent='Please enter a valid 16-digit card number.';return}
+    if(!/^\d{2}\/\d{2}$/.test(exp)){err.textContent='Please enter expiry as MM/YY.';return}
+    if(cvv.length<3){err.textContent='Please enter a valid CVV (3-4 digits).';return}
+  } else {
+    const em=document.getElementById('pp-em').value.trim();
+    if(!em||!/\S+@\S+\.\S+/.test(em)){err.textContent='Please enter a valid PayPal email.';return}
+  }
+  btn.disabled=true;btn.textContent='Processing…';
+  setTimeout(()=>{
+    const total=cartAmt().toFixed(2);
+    cart=[];saveCart();updBadge();renderCart();
+    closePay();
+    document.getElementById('suc-amt').textContent='$'+total;
+    document.getElementById('sucwrap').classList.add('on');
+    btn.disabled=false;btn.textContent='Pay Now →';
+  },2000);
+}
+
+function closeSuc(){document.getElementById('sucwrap').classList.remove('on')}
+
+/* ═══════════════════════════════════════
+   AUTH
+═══════════════════════════════════════ */
+async function doLogin(){
+  const email=document.getElementById('l-em').value.trim();
+  const pass=document.getElementById('l-pw').value;
+  const err=document.getElementById('l-err');
+  const btn=document.getElementById('l-btn');
+  err.textContent='';
+  if(!email||!pass){err.textContent='Please fill in all fields.';return}
+  btn.disabled=true;btn.textContent='Signing in…';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false;btn.textContent='Sign In';
+  if(error){err.textContent=error.message;return}
+  user=data.user;updNav();closeModal();
+  showToast('Welcome back! 👋');
+}
+
+async function doSignup(){
+  const name=document.getElementById('s-nm').value.trim();
+  const email=document.getElementById('s-em').value.trim();
+  const pass=document.getElementById('s-pw').value;
+  const err=document.getElementById('s-err');
+  const btn=document.getElementById('s-btn');
+  err.textContent='';
+  if(!name||!email||!pass){err.textContent='Please fill in all fields.';return}
+  if(!/\S+@\S+\.\S+/.test(email)){err.textContent='Enter a valid email address.';return}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';return}
+  btn.disabled=true;btn.textContent='Creating account…';
+  const{data,error}=await sb.auth.signUp({
+    email,password:pass,options:{data:{full_name:name}}
+  });
+  btn.disabled=false;btn.textContent='Create Account';
+  if(error){err.textContent=error.message;return}
+  document.getElementById('f-up').style.display='none';
+  document.querySelector('.mtabs').style.display='none';
+  document.getElementById('conf-em').textContent=email;
+  document.getElementById('mconf').classList.add('on');
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  user=null;updNav();showToast('Signed out. See you soon!');
+}
+
+function updNav(){
+  const nu=document.getElementById('nu');
+  const bi=document.getElementById('btn-in');
+  if(user){
+    const name=user.user_metadata?.full_name||user.email.split('@')[0];
+    document.getElementById('nav-av').textContent=name.charAt(0).toUpperCase();
+    document.getElementById('nav-nm').textContent=name.split(' ')[0];
+    nu.classList.add('show');bi.style.display='none';
+  } else {
+    nu.classList.remove('show');bi.style.display='block';
+  }
+}
+
+async function initAuth(){
+  const hash=window.location.hash;
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('token_hash')&&params.get('type')){
+    const{data,error}=await sb.auth.verifyOtp({
+      token_hash:params.get('token_hash'),type:params.get('type')
+    });
+    if(!error&&data.session){
+      user=data.session.user;updNav();
+      setTimeout(()=>showToast('✅ Email confirmed! Welcome to DRIP 🎉'),500);
+      window.history.replaceState({},'',window.location.pathname);
+    }
+  } else if(hash&&hash.includes('access_token')){
+    await sb.auth.getSession();
+    const{data:{session}}=await sb.auth.getSession();
+    if(session){user=session.user;updNav();setTimeout(()=>showToast('✅ Email confirmed! Welcome 🎉'),500);}
+    window.history.replaceState({},'',window.location.pathname);
+  } else {
+    const{data:{session}}=await sb.auth.getSession();
+    if(session){user=session.user;updNav()}
+  }
+  sb.auth.onAuthStateChange((_,s)=>{user=s?.user||null;updNav()});
+}
+
+/* ═══════════════════════════════════════
+   MODAL
+═══════════════════════════════════════ */
+function openModal(){document.getElementById('mwrap').classList.add('on')}
+function closeModal(){document.getElementById('mwrap').classList.remove('on')}
+function swTab(t){
+  ['in','up'].forEach(x=>{
+    document.getElementById('t-'+x).classList.toggle('on',x===t);
+    document.getElementById('f-'+x).classList.toggle('on',x===t);
+  });
+  document.querySelectorAll('.merr').forEach(e=>e.textContent='');
+  document.getElementById('mconf').classList.remove('on');
+  document.getElementById('f-up').style.display='';
+  const tabs=document.querySelector('.mtabs');
+  if(tabs)tabs.style.display='';
+}
+document.getElementById('mwrap').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.getElementById('paywrap').addEventListener('click',function(e){if(e.target===this)closePay()});
+
+/* ═══════════════════════════════════════
+   PRODUCTS RENDER
+═══════════════════════════════════════ */
+function renderProds(f='all'){
+  const list=f==='all'?PRODS:PRODS.filter(p=>p.cat===f);
+  document.getElementById('pgrid').innerHTML=list.map((p,i)=>`
+    <div class="pc" style="transition-delay:${i*.055}s">
+      <div class="pw">
+        <img src="${p.img}" alt="${p.name}" loading="lazy"
+             onerror="this.src='https://placehold.co/275x366/0f0f16/ffd75a?text=DRIP'"/>
+        ${p.badge?`<div class="pbdg">${p.badge}</div>`:''}
+        <div class="pveil">
+          <button class="padd" onclick="addToCart(${p.id})">Add to Cart</button>
+        </div>
+      </div>
+      <div class="pin">
+        <div class="pcat">${p.cat==='tshirt'?'T-Shirt':'Jeans'}</div>
+        <div class="pnm">${p.name}</div>
+        <div class="prw">
+          <div class="ppr">$${p.price.toFixed(2)}</div>
+          <button class="pqk" onclick="addToCart(${p.id})" title="Quick add">+</button>
+        </div>
+      </div>
+    </div>`).join('');
+  obsAll();
+}
+
+function doFilter(cat,btn){
+  document.querySelectorAll('.flt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');renderProds(cat);
+}
+
+function obsAll(){
+  const io=new IntersectionObserver(en=>{
+    en.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')});
+  },{threshold:.07});
+  document.querySelectorAll('.pc,.st').forEach(el=>io.observe(el));
+}
+
+/* ═══════════════════════════════════════
+   MARQUEE
+═══════════════════════════════════════ */
+function buildMq(){
+  const items=[
+    'Premium Quality','Free Shipping +$50','New Collection 2025',
+    'T-Shirts & Jeans','Code DRIP10','Easy 30-Day Returns','100% Cotton',
+    'Premium Quality','Free Shipping +$50','New Collection 2025',
+    'T-Shirts & Jeans','Code DRIP10','Easy 30-Day Returns','100% Cotton',
+  ];
+  document.getElementById('mqt').innerHTML=items.map(m=>
+    `<div class="mq-item"><span class="mq-gem">✦</span>${m}</div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+let toastTmr;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('on');
+  clearTimeout(toastTmr);
+  toastTmr=setTimeout(()=>el.classList.remove('on'),3000);
+}
+
+/* ═══════════════════════════════════════
+   CURSOR
+═══════════════════════════════════════ */
+(()=>{
+  const dot=document.getElementById('cur');
+  const ring=document.getElementById('cur-r');
+  if(!dot)return;
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  document.addEventListener('mouseover',e=>{
+    document.body.classList.toggle('cur-big',!!e.target.closest('button,a,.pc'));
+  });
+  (function loop(){
+    dot.style.left=mx+'px';dot.style.top=my+'px';
+    rx+=(mx-rx)*.1;ry+=(my-ry)*.1;
+    ring.style.left=rx+'px';ring.style.top=ry+'px';
+    requestAnimationFrame(loop);
+  })();
+})();
+
+/* ═══════════════════════════════════════
+   NAV SCROLL
+═══════════════════════════════════════ */
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>10);
+});
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function goTo(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'})}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeCart();closeModal();closePay();closeSuc()}
+});
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+window.addEventListener('load',()=>{
+  buildMq();updBadge();initAuth();
+  setTimeout(()=>{
+    document.getElementById('loader').classList.add('out');
+    document.getElementById('nav').classList.add('show');
+    renderProds();
+  },1800);
+});
+</script>
+</body>
+</html>
